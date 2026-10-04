@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
+
+:root {
+  color-scheme: light;
+  font-family: 'Manrope', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --canvas: #f6f8fc;
+  --surface: #ffffff;
+  --surface-soft: #f2f6fc;
+  --surface-blue: #c2e7ff;
+  --blue: #0b57d0;
+  --blue-hover: #0842a0;
+  --ink: #1f1f1f;
+  --muted: #5f6368;
+  --line: #e1e5ea;
+  --line-strong: #c7cdd4;
+  --green: #0d652d;
+  --green-bg: #e6f4ea;
+  --amber: #8a4b08;
+  --amber-bg: #fef7e0;
+  --red: #b3261e;
+  --red-bg: #fce8e6;
+  --shadow: 0 8px 24px rgba(60, 64, 67, 0.11);
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  min-width: 320px;
+  background: var(--canvas);
+}
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--ink);
+  background: var(--canvas);
+}
+button,
+input {
+  font: inherit;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  color: inherit;
+}
+a {
+  color: var(--blue);
+  text-underline-offset: 3px;
+}
+::selection {
+  color: #062e6f;
+  background: #c2e7ff;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: #aeb4bc;
+  background-clip: padding-box;
+}
+:focus-visible {
+  outline: 3px solid rgba(11, 87, 208, 0.3);
+  outline-offset: 2px;
+}
+#app {
+  min-height: 100vh;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
