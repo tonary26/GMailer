@@ -17,3 +17,16 @@ func ContactRouter(h *ContactHandler) chi.Router {
 
 	return r
 }
+
+func MailingRouter(h *MailingHandler) chi.Router {
+	r := chi.NewRouter()
+	r.Get("/list", h.List)
+	r.Post("/create", h.Create)
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/get", h.GetByID)
+		r.Post("/start", h.Start)
+	})
+
+	return r
+}

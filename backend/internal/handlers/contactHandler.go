@@ -21,25 +21,25 @@ func (h *ContactHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		respondWithError(w, r, http.StatusBadRequest, "Некоректные данные")
-		return 
+		return
 	}
 
 	contact, err := h.store.CreateContact(ctx, input)
 	if err != nil {
 		respondWithError(w, r, http.StatusInternalServerError, err.Error())
-		return 
+		return
 	}
 
-	respondWithJSON(w, r, http.StatusCreated, map[string]interface{}{"contact": contact})	
+	respondWithJSON(w, r, http.StatusCreated, map[string]interface{}{"contact": contact})
 }
 
 func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	err, contacts := h.store.ListContact(ctx)
+	contacts, err := h.store.ListContact(ctx)
 	if err != nil {
 		respondWithError(w, r, http.StatusBadRequest, "Ошибка получения контактов")
-		return 
+		return
 	}
 
 	respondWithJSON(w, r, http.StatusOK, map[string]interface{}{"contacts": contacts})

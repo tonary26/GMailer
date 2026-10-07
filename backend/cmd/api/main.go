@@ -36,11 +36,15 @@ func main() {
 	contactStore := database.NewContactStore(db)
 	contactHandler := handlers.NewContactHandler(contactStore) 
 
+	mailingStore := database.NewMailingStore(db)
+	mailingHandler := handlers.NewMailingHandler(mailingStore)
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger, middleware.Recoverer)
 
 	r.Mount("/api/auth", handlers.AuthRouter(authHandler))
 	r.Mount("/api/contact", handlers.ContactRouter(contactHandler))
+	r.Mount("/api/mailings", handlers.MailingRouter(mailingHandler))
 
 	log.Printf("Сервер запущен на порту %s", appPort)
 	if err := http.ListenAndServe(":"+appPort, r); err != nil {
