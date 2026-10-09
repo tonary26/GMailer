@@ -46,28 +46,6 @@ GMailer - веб-приложение для создания и запуска 
 - Docker Compose
 - golang-migrate
 
-## Структура проекта
-
-```text
-GMailer/
-├── backend/
-│   ├── cmd/api/             # Точка запуска API
-│   ├── internal/database/   # Работа с PostgreSQL
-│   ├── internal/handlers/   # HTTP-обработчики
-│   ├── internal/mailer/     # SMTP-клиент
-│   ├── internal/models/     # Модели данных
-│   ├── internal/worker/     # Фоновая отправка писем
-│   └── migrations/          # SQL-миграции
-├── frontend/
-│   ├── src/components/      # Общие компоненты
-│   ├── src/router/          # Маршруты Vue Router
-│   ├── src/services/        # HTTP-клиент
-│   ├── src/stores/          # Pinia stores
-│   └── src/views/           # Страницы приложения
-├── docker-compose.yml
-├── gmailer.jpg
-└── README.md
-```
 
 ## Требования
 
@@ -132,20 +110,6 @@ docker compose up --build
 docker compose up -d --build
 ```
 
-Для просмотра логов:
-
-```bash
-docker compose logs -f api frontend postgres
-```
-
-Для остановки контейнеров без удаления данных:
-
-```bash
-docker compose down
-```
-
-Не используйте `docker compose down -v`, если необходимо сохранить базу данных.
-
 ## Работа с приложением
 
 1. Откройте `http://localhost:5173`.
@@ -189,13 +153,6 @@ docker compose down
 
 ## API
 
-### Авторизация
-
-| Метод | Маршрут | Назначение |
-| --- | --- | --- |
-| `POST` | `/api/auth/register` | Регистрация пользователя |
-| `POST` | `/api/auth/login` | Вход и получение JWT-токена |
-
 Пример тела запроса:
 
 ```json
@@ -222,14 +179,6 @@ docker compose down
 ```
 
 ### Рассылки
-
-| Метод | Маршрут | Назначение |
-| --- | --- | --- |
-| `GET` | `/api/mailings/list` | Получение рассылок |
-| `GET` | `/api/mailings/progress` | Получение статистики очередей |
-| `POST` | `/api/mailings/create` | Создание черновика |
-| `GET` | `/api/mailings/{id}/get` | Получение одной рассылки |
-| `POST` | `/api/mailings/{id}/start` | Запуск рассылки |
 
 Пример создания рассылки:
 
@@ -301,6 +250,3 @@ docker compose exec postgres sh -lc \
 - Нет отслеживания открытий писем и переходов по ссылкам
 - SMTP-параметры задаются через переменные окружения
 
-## Лицензия
-
-Лицензия проекта пока не указана.
