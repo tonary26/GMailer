@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"gmailer/internal/database"
 	"gmailer/internal/models"
 	"net/http"
@@ -49,6 +50,16 @@ func (h *MailingHandler) List(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, r, http.StatusOK, map[string]interface{}{"mailings": mailings})
 }
 
+func (h *MailingHandler) Progress(w http.ResponseWriter, r *http.Request) {
+	progress, err := h.store.ListProgress(r.Context())
+	if err != nil {
+		respondWithError(w, r, http.StatusInternalServerError, "Не удалось получить прогресс рассылок")
+		return
+	}
+
+	respondWithJSON(w, r, http.StatusOK, map[string]interface{}{"progress": progress})
+}
+
 func (h *MailingHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -78,6 +89,14 @@ func (h *MailingHandler) Start(w http.ResponseWriter, r *http.Request) {
 
 	err = h.store.Start(ctx, id)
 	if err != nil {
+		if errors.Is(err, database.ErrNoContacts) {
+			respondWithError(w, r, http.StatusConflict, "Добавьте хотя бы один контакт перед запуском")
+			return
+		}
+		if errors.Is(err, database.ErrMailingNotDraft) {
+			respondWithError(w, r, http.StatusConflict, "Эта рассылка уже запущена")
+			return
+		}
 		respondWithError(w, r, http.StatusInternalServerError, "не удалось запустить рассылку")
 		return
 	}

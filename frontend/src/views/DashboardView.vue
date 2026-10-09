@@ -19,6 +19,8 @@ const contactsError = ref('')
 const mailings = ref([])
 const mailingsLoading = ref(true)
 const mailingsError = ref('')
+const mailingProgress = ref({})
+const progressError = ref('')
 const selectedMailing = ref(null)
 const mailingDetailsOpen = ref(false)
 const mailingDetailsLoading = ref(false)
@@ -48,6 +50,7 @@ const contactNameError = ref('')
 const contactEmailError = ref('')
 const contactSubmitError = ref('')
 const contactSubmitting = ref(false)
+let progressTimer = null
 
 const navigation = computed(() => [
   { id: 'overview', label: 'Обзор', icon: 'grid' },
@@ -109,6 +112,18 @@ const runningMailingsCount = computed(
   () => mailings.value.filter((mailing) => mailing.status === 'running').length,
 )
 
+const deliveryTotals = computed(() =>
+  Object.values(mailingProgress.value).reduce(
+    (totals, item) => ({
+      total: totals.total + item.total,
+      pending: totals.pending + item.pending + item.sending,
+      sent: totals.sent + item.sent,
+      failed: totals.failed + item.failed,
+    }),
+    { total: 0, pending: 0, sent: 0, failed: 0 },
+  ),
+)
+
 const statusMeta = {
   draft: { label: 'Черновик', className: 'status--draft' },
   running: { label: 'Запущена', className: 'status--running' },
@@ -119,6 +134,23 @@ const statusMeta = {
 const mailingStatus = (status) =>
   statusMeta[status] || { label: status, className: 'status--draft' }
 
+const progressFor = (mailingId) => mailingProgress.value[mailingId] || null
+
+const progressPercent = (mailingId) => {
+  const progress = progressFor(mailingId)
+  if (!progress?.total) return 0
+  return Math.min(100, Math.round(((progress.sent + progress.failed) / progress.total) * 100))
+}
+
+const deliverySummary = (mailingId) => {
+  const progress = progressFor(mailingId)
+  if (!progress?.total) return 'Готовим очередь отправки…'
+  const delivered = `${progress.sent.toLocaleString('ru-RU')} из ${progress.total.toLocaleString('ru-RU')} отправлено`
+  return progress.failed
+    ? `${delivered}, ошибок: ${progress.failed.toLocaleString('ru-RU')}`
+    : delivered
+}
+
 const formatContactDate = (value) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -126,9 +158,9 @@ const formatContactDate = (value) => {
 }
 
 const formatMailingDate = (value, includeTime = false) => {
-  if (!value) return '—'
+  if (!value) return '-'
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
+  if (Number.isNaN(date.getTime())) return '-'
   return new Intl.DateTimeFormat('ru-RU', {
     dateStyle: 'medium',
     ...(includeTime ? { timeStyle: 'short' } : {}),
@@ -164,6 +196,28 @@ const loadMailings = async () => {
       'Не удалось загрузить рассылки. Проверьте соединение и попробуйте ещё раз.'
   } finally {
     mailingsLoading.value = false
+  }
+}
+
+const loadMailingProgress = async (silent = false) => {
+  if (!silent) progressError.value = ''
+  try {
+    const { data } = await api.get('/mailings/progress')
+    const items = Array.isArray(data.progress) ? data.progress : []
+    mailingProgress.value = Object.fromEntries(items.map((item) => [item.mailing_id, item]))
+
+    const statuses = new Map(items.map((item) => [item.mailing_id, item.status]))
+    mailings.value = mailings.value.map((mailing) =>
+      statuses.has(mailing.id) ? { ...mailing, status: statuses.get(mailing.id) } : mailing,
+    )
+    if (selectedMailing.value && statuses.has(selectedMailing.value.id)) {
+      selectedMailing.value = {
+        ...selectedMailing.value,
+        status: statuses.get(selectedMailing.value.id),
+      }
+    }
+  } catch {
+    if (!silent) progressError.value = 'Не удалось получить актуальный прогресс отправки.'
   }
 }
 
@@ -263,6 +317,7 @@ const startMailing = async (mailing) => {
     if (selectedMailing.value?.id === mailing.id) {
       selectedMailing.value = { ...selectedMailing.value, ...update }
     }
+    await loadMailingProgress()
   } catch (error) {
     mailingDetailsError.value =
       error.response?.data?.message || 'Не удалось запустить рассылку. Попробуйте ещё раз.'
@@ -370,10 +425,18 @@ const handleKeydown = (event) => {
 }
 
 document.addEventListener('keydown', handleKeydown)
-onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
-onMounted(() => {
-  loadContacts()
-  loadMailings()
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  if (progressTimer) window.clearInterval(progressTimer)
+})
+onMounted(async () => {
+  await Promise.all([loadContacts(), loadMailings()])
+  await loadMailingProgress()
+  progressTimer = window.setInterval(() => {
+    if (mailings.value.some((mailing) => mailing.status === 'running')) {
+      loadMailingProgress(true)
+    }
+  }, 4000)
 })
 
 const logout = () => {
@@ -442,9 +505,6 @@ const logout = () => {
         </button>
       </nav>
       <div class="sidebar__bottom">
-        <button class="nav-item" type="button" @click="selectSection('settings')">
-          <AppIcon name="settings" /><span>Настройки</span>
-        </button>
         <button class="nav-item" type="button" @click="logout">
           <AppIcon name="logout" /><span>Выйти</span>
         </button>
@@ -506,7 +566,12 @@ const logout = () => {
               >
                 <span class="mailing-row__main"
                   ><strong>{{ mailing.title }}</strong
-                  ><small>{{ mailing.subject }}</small></span
+                  ><small>{{ mailing.subject }}</small
+                  ><small
+                    v-if="['running', 'done'].includes(mailing.status) && progressFor(mailing.id)"
+                    class="mailing-row__progress"
+                    >{{ deliverySummary(mailing.id) }}</small
+                  ></span
                 >
                 <span class="status-badge" :class="mailingStatus(mailing.status).className">{{
                   mailingStatus(mailing.status).label
@@ -558,7 +623,12 @@ const logout = () => {
           >
             <span class="mailing-row__main"
               ><strong>{{ mailing.title }}</strong
-              ><small>{{ mailing.subject }}</small></span
+              ><small>{{ mailing.subject }}</small
+              ><small
+                v-if="['running', 'done'].includes(mailing.status) && progressFor(mailing.id)"
+                class="mailing-row__progress"
+                >{{ deliverySummary(mailing.id) }}</small
+              ></span
             >
             <span class="status-badge" :class="mailingStatus(mailing.status).className">{{
               mailingStatus(mailing.status).label
@@ -630,25 +700,35 @@ const logout = () => {
         </div>
       </section>
 
-      <section v-else class="content-panel full-panel empty-state empty-state--large">
-        <span class="empty-state__icon"
-          ><AppIcon :name="activeSection === 'analytics' ? 'chart' : 'settings'" :size="30"
-        /></span>
-        <h2>
-          {{
-            activeSection === 'analytics'
-              ? 'Аналитика появится здесь'
-              : 'Настройки рабочего пространства'
-          }}
-        </h2>
-        <p>
-          {{
-            activeSection === 'analytics'
-              ? 'Подключите эндпоинты статистики, чтобы видеть реальные открытия и переходы.'
-              : 'Раздел готов к подключению параметров отправителя и SMTP.'
-          }}
-        </p>
-      </section>
+      <template v-else-if="activeSection === 'analytics'">
+        <section v-if="progressError" class="content-panel full-panel empty-state" role="alert">
+          <AppIcon name="clock" :size="26" />
+          <h2>Статистика недоступна</h2>
+          <p>{{ progressError }}</p>
+          <button class="retry-button" type="button" @click="loadMailingProgress()">
+            Повторить
+          </button>
+        </section>
+        <section v-else-if="deliveryTotals.total" class="overview-grid delivery-overview">
+          <article class="overview-metric">
+            <span>Отправлено писем</span>
+            <strong>{{ deliveryTotals.sent.toLocaleString('ru-RU') }}</strong>
+          </article>
+          <article class="overview-metric">
+            <span>Ожидают отправки</span>
+            <strong>{{ deliveryTotals.pending.toLocaleString('ru-RU') }}</strong>
+          </article>
+          <article class="overview-metric">
+            <span>Ошибки доставки</span>
+            <strong>{{ deliveryTotals.failed.toLocaleString('ru-RU') }}</strong>
+          </article>
+        </section>
+        <section v-else class="content-panel full-panel empty-state empty-state--large">
+          <span class="empty-state__icon"><AppIcon name="chart" :size="30" /></span>
+          <h2>Статистика появится после запуска</h2>
+          <p>Создайте рассылку и запустите её, чтобы увидеть результаты доставки.</p>
+        </section>
+      </template>
     </main>
 
     <div v-if="composerOpen" class="composer-scrim" @click.self="closeComposer">
@@ -777,6 +857,26 @@ const logout = () => {
           <span class="loading-indicator" aria-hidden="true"></span> Обновляем данные…
         </div>
         <template v-if="selectedMailing">
+          <div
+            v-if="['running', 'done'].includes(selectedMailing.status)"
+            class="delivery-progress"
+            aria-live="polite"
+          >
+            <div class="delivery-progress__copy">
+              <strong>Доставка писем</strong>
+              <span>{{ deliverySummary(selectedMailing.id) }}</span>
+            </div>
+            <div
+              class="delivery-progress__track"
+              role="progressbar"
+              aria-label="Прогресс доставки"
+              :aria-valuenow="progressPercent(selectedMailing.id)"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <span :style="{ width: `${progressPercent(selectedMailing.id)}%` }"></span>
+            </div>
+          </div>
           <dl class="details-list">
             <div>
               <dt>Тема письма</dt>
@@ -793,6 +893,13 @@ const logout = () => {
           </div>
         </template>
         <p v-if="mailingDetailsError" class="form-error" role="alert">{{ mailingDetailsError }}</p>
+        <p
+          v-if="selectedMailing?.status === 'draft' && !contactsLoading && !contacts.length"
+          id="no-contacts-hint"
+          class="form-hint"
+        >
+          Перед запуском добавьте хотя бы один контакт.
+        </p>
         <div class="composer__actions">
           <button type="button" :disabled="Boolean(startingMailingId)" @click="closeMailingDetails">
             Закрыть
@@ -801,7 +908,14 @@ const logout = () => {
             v-if="selectedMailing?.status === 'draft'"
             class="action-primary"
             type="button"
-            :disabled="Boolean(startingMailingId) || mailingDetailsLoading"
+            :disabled="
+              Boolean(startingMailingId) ||
+              mailingDetailsLoading ||
+              (!contactsLoading && !contacts.length)
+            "
+            :aria-describedby="
+              !contactsLoading && !contacts.length ? 'no-contacts-hint' : undefined
+            "
             @click="startMailing(selectedMailing)"
           >
             <span v-if="startingMailingId" class="button-spinner" aria-hidden="true"></span>
@@ -1185,6 +1299,9 @@ const logout = () => {
   grid-column: 1 / -1;
   overflow: hidden;
 }
+.delivery-overview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .text-button {
   border: 0;
   color: var(--blue);
@@ -1279,6 +1396,10 @@ const logout = () => {
 .mailing-row time {
   color: var(--muted);
   font-size: 11px;
+}
+.mailing-row__main .mailing-row__progress {
+  color: var(--blue);
+  font-weight: 600;
 }
 .mailing-row time {
   font-variant-numeric: tabular-nums;
@@ -1539,6 +1660,36 @@ const logout = () => {
   width: 18px;
   height: 18px;
 }
+.delivery-progress {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+.delivery-progress__copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 11px;
+}
+.delivery-progress__copy span {
+  color: var(--muted);
+  text-align: right;
+}
+.delivery-progress__track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dfe5ec;
+}
+.delivery-progress__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
 .details-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(130px, auto);
@@ -1577,6 +1728,12 @@ const logout = () => {
   overflow-wrap: anywhere;
   font-size: 12px;
   line-height: 1.6;
+}
+.form-hint {
+  margin: 0;
+  color: var(--amber);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .field--error .field__control {
   border-color: var(--red);
@@ -1684,6 +1841,9 @@ const logout = () => {
   .overview-grid {
     margin: 0 14px 20px;
   }
+  .delivery-overview {
+    grid-template-columns: 1fr;
+  }
   .panel-heading {
     padding: 16px;
   }
@@ -1718,6 +1878,14 @@ const logout = () => {
   }
   .details-list {
     grid-template-columns: 1fr;
+  }
+  .delivery-progress__copy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .delivery-progress__copy span {
+    text-align: left;
   }
 }
 </style>

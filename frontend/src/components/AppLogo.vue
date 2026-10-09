@@ -1,5 +1,5 @@
 <template>
-  <RouterLink class="brand" to="/" aria-label="GMailer — на главную">
+  <RouterLink class="brand" to="/" aria-label="GMailer - на главную">
     <span class="brand__mark" aria-hidden="true">
       <svg viewBox="0 0 32 24" role="img">
         <path

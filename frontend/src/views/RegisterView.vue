@@ -31,10 +31,7 @@ const submit = async () => {
 </script>
 
 <template>
-  <AuthLayout
-    title="Создайте аккаунт"
-    description="Один шаг — и рабочее пространство для рассылок готово."
-  >
+  <AuthLayout title="Создайте аккаунт">
     <form class="auth-form" novalidate @submit.prevent="submit">
       <div class="field">
         <label for="register-email">Электронная почта</label>

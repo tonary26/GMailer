@@ -4,6 +4,8 @@ import (
 	"context"
 	"gmailer/internal/database"
 	"gmailer/internal/handlers"
+	"gmailer/internal/mailer"
+	"gmailer/internal/worker"
 	"log"
 	"net/http"
 	"os"
@@ -34,10 +36,23 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authStore)
 
 	contactStore := database.NewContactStore(db)
-	contactHandler := handlers.NewContactHandler(contactStore) 
+	contactHandler := handlers.NewContactHandler(contactStore)
 
 	mailingStore := database.NewMailingStore(db)
 	mailingHandler := handlers.NewMailingHandler(mailingStore)
+
+	sender := &mailer.SMTPSender{
+		Host:     os.Getenv("SMTP_HOST"),
+		Port:     os.Getenv("SMTP_PORT"),
+		User:     os.Getenv("SMTP_USER"),
+		Password: os.Getenv("SMTP_PASSWORD"),
+	}
+
+	w := worker.NewWorker(mailingStore, sender)
+	workerCtx, cancelWorker := context.WithCancel(context.Background())
+	defer cancelWorker()
+
+	go w.Run(workerCtx)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger, middleware.Recoverer)

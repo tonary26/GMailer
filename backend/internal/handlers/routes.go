@@ -21,6 +21,7 @@ func ContactRouter(h *ContactHandler) chi.Router {
 func MailingRouter(h *MailingHandler) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/list", h.List)
+	r.Get("/progress", h.Progress)
 	r.Post("/create", h.Create)
 
 	r.Route("/{id}", func(r chi.Router) {

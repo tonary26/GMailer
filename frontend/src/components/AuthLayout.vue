@@ -1,8 +1,7 @@
 <script setup>
 import AppLogo from './AppLogo.vue'
-import AppIcon from './AppIcon.vue'
 
-defineProps({ title: String, description: String })
+defineProps({ title: String })
 </script>
 
 <template>
@@ -22,12 +21,9 @@ defineProps({ title: String, description: String })
     <section class="auth-panel">
       <div class="auth-panel__mobile-logo"><AppLogo /></div>
       <div class="auth-card">
-        <div class="auth-card__icon"><AppIcon name="send" :size="23" /></div>
         <h2>{{ title }}</h2>
-        <p class="auth-card__description">{{ description }}</p>
         <slot />
       </div>
-      <p class="auth-legal">Продолжая, вы соглашаетесь с условиями обработки данных.</p>
     </section>
   </main>
 </template>
@@ -90,34 +86,12 @@ defineProps({ title: String, description: String })
   width: min(430px, 100%);
   margin: auto;
 }
-.auth-card__icon {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 27px;
-  place-items: center;
-  border-radius: 14px;
-  color: #0842a0;
-  background: var(--surface-blue);
-}
 .auth-card h2 {
-  margin: 0 0 10px;
+  margin: 0 0 34px;
   font-size: clamp(30px, 3vw, 40px);
   font-weight: 600;
   letter-spacing: -0.035em;
 }
-.auth-card__description {
-  margin: 0 0 34px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-.auth-legal {
-  margin: auto auto 0;
-  color: #5f6368;
-  font-size: 11px;
-  text-align: center;
-}
-
 @media (max-width: 900px) {
   .auth-page {
     grid-template-columns: 1fr;
@@ -135,9 +109,6 @@ defineProps({ title: String, description: String })
   }
   .auth-card {
     margin: auto;
-  }
-  .auth-legal {
-    margin-top: 50px;
   }
 }
 </style>

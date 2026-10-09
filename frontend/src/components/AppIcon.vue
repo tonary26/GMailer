@@ -30,12 +30,6 @@ defineProps({ name: { type: String, required: true }, size: { type: Number, defa
       <path d="M17 11a3 3 0 1 0 0-6M19 15.5a3.5 3.5 0 0 1 2 3V20" />
     </template>
     <template v-else-if="name === 'chart'"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></template>
-    <template v-else-if="name === 'settings'">
-      <circle cx="12" cy="12" r="3" />
-      <path
-        d="M19.4 15a1.8 1.8 0 0 0 .36 2l.06.06-2.76 2.76-.06-.06a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.64V21h-3.8v-.08A1.8 1.8 0 0 0 9 19.28a1.8 1.8 0 0 0-2 .36l-.06.06-2.76-2.76.06-.06a1.8 1.8 0 0 0 .36-2A1.8 1.8 0 0 0 3 13.8H3V10h.08A1.8 1.8 0 0 0 4.72 9a1.8 1.8 0 0 0-.36-2l-.06-.06 2.76-2.76.06.06a1.8 1.8 0 0 0 2 .36A1.8 1.8 0 0 0 10.2 3H14v.08A1.8 1.8 0 0 0 15 4.72a1.8 1.8 0 0 0 2-.36l.06-.06 2.76 2.76-.06.06a1.8 1.8 0 0 0-.36 2A1.8 1.8 0 0 0 21 10.2V14h-.08A1.8 1.8 0 0 0 19.4 15Z"
-      />
-    </template>
     <template v-else-if="name === 'plus'"><path d="M12 5v14M5 12h14" /></template>
     <template v-else-if="name === 'search'">
       <circle cx="10.8" cy="10.8" r="6.8" />
